@@ -3,8 +3,8 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +18,9 @@ import (
 var (
 	log = logrus.New()
 	now = time.Now()
+
+	executionType = flag.String("type", "orchestration", "orchestration or pipeline")
+	statusFilter  = flag.String("status", "RUNNING", "the execution status to filter on")
 )
 
 type execution struct {
@@ -44,22 +47,24 @@ func (s ByStartTime) Less(i, j int) bool {
 }
 
 func main() {
-	statusFilter := getStatusFilter()
-	log.Infof("Filtering executions on status: %s", statusFilter)
+	flag.Parse()
+
+	log.Infof("Filtering %s on status: %s", *executionType, *statusFilter)
 
 	c, err := createClient()
 	if err != nil {
 		log.WithField("cause", err.Error()).Fatal("failed creating Redis client")
 	}
 
-	keys, err := c.Keys("orchestration:*").Result()
+	keys, err := c.Keys(fmt.Sprintf("%s:*", *executionType)).Result()
 	if err != nil {
 		log.WithField("cause", err.Error()).Fatal("failed listing all orchestration keys")
 	}
 
 	var executions []execution
 	for _, key := range keys {
-		if strings.HasPrefix(key, "orchestration:app:") {
+		if strings.HasPrefix(key, fmt.Sprintf("%s:app:", *executionType)) ||
+			strings.HasPrefix(key, fmt.Sprintf("%s:executions", *executionType)) {
 			continue
 		}
 
@@ -69,7 +74,7 @@ func main() {
 			continue
 		}
 
-		if status != statusFilter {
+		if status != *statusFilter {
 			continue
 		}
 
@@ -108,11 +113,4 @@ func createClient() (*redis.Client, error) {
 		return nil, errors.Wrap(err, "could not connect to redis")
 	}
 	return c, nil
-}
-
-func getStatusFilter() string {
-	if len(os.Args[1:]) == 0 {
-		return "RUNNING"
-	}
-	return os.Args[1]
 }
