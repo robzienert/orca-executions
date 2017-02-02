@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,6 +44,9 @@ func (s ByStartTime) Less(i, j int) bool {
 }
 
 func main() {
+	statusFilter := getStatusFilter()
+	log.Infof("Filtering executions on status: %s", statusFilter)
+
 	c, err := createClient()
 	if err != nil {
 		log.WithField("cause", err.Error()).Fatal("failed creating Redis client")
@@ -56,6 +60,16 @@ func main() {
 	var executions []execution
 	for _, key := range keys {
 		if strings.HasPrefix(key, "orchestration:app:") {
+			continue
+		}
+
+		status, err := c.HGet(key, "status").Result()
+		if err != nil {
+			log.WithField("cause", err.Error()).Warn("execution does not have status")
+			continue
+		}
+
+		if status != statusFilter {
 			continue
 		}
 
@@ -94,4 +108,11 @@ func createClient() (*redis.Client, error) {
 		return nil, errors.Wrap(err, "could not connect to redis")
 	}
 	return c, nil
+}
+
+func getStatusFilter() string {
+	if len(os.Args[1:]) == 0 {
+		return "RUNNING"
+	}
+	return os.Args[1]
 }
