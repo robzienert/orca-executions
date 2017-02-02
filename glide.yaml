@@ -1,0 +1,8 @@
+package: github.com/robzienert/orca-executions
+import:
+- package: gopkg.in/redis.v5
+  version: ~5.2.3
+- package: github.com/pkg/errors
+  version: ~0.8.0
+- package: github.com/Sirupsen/logrus
+  version: ~0.11.0

@@ -1,0 +1,10 @@
+hash: 6eaa999846c04356e5e4dd6e7c10c46bfa217cf2a06e6907fd8e37f41598fb9c
+updated: 2017-02-01T15:49:04.878462312-08:00
+imports:
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/Sirupsen/logrus
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
+- name: gopkg.in/redis.v5
+  version: 9cd49656897843b8f2bf3d9639230cb7aec90d6c
+testImports: []
