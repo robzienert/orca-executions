@@ -12,15 +12,18 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
+	"github.com/robzienert/orca-executions/filter"
 	redis "gopkg.in/redis.v5"
 )
 
 var (
 	log = logrus.New()
-	now = time.Now()
 
 	executionType = flag.String("type", "orchestration", "orchestration or pipeline")
 	statusFilter  = flag.String("status", "RUNNING", "the execution status to filter on")
+	extraFilters  = flag.String("filters", "", "Extra filters in comma-delimited Key=Value format")
+	quiet         = flag.Bool("quiet", false, "Set if you do not want logging enabled")
+	debug         = flag.Bool("debug", false, "Set if you want debug level logging")
 )
 
 type execution struct {
@@ -29,7 +32,7 @@ type execution struct {
 }
 
 func (e execution) TimeSince() string {
-	return now.Sub(e.StartTime).String()
+	return time.Now().Sub(e.StartTime).String()
 }
 
 type ByStartTime []execution
@@ -49,18 +52,34 @@ func (s ByStartTime) Less(i, j int) bool {
 func main() {
 	flag.Parse()
 
-	log.Infof("Filtering %s on status: %s", *executionType, *statusFilter)
+	if *quiet {
+		// Not quite, but meh
+		log.Level = logrus.PanicLevel
+	}
+	if *debug {
+		log.Level = logrus.DebugLevel
+	}
+
+	filters, err := filter.Parse(*extraFilters, *statusFilter)
+	if err != nil {
+		log.WithField("cause", err.Error()).Fatal("could not parse given filters")
+	}
+	for _, filter := range filters {
+		log.WithField(filter.Key, filter.Value).Info("Adding result filter")
+	}
 
 	c, err := createClient()
 	if err != nil {
 		log.WithField("cause", err.Error()).Fatal("failed creating Redis client")
 	}
 
+	log.Infof("Finding all keys for type: %s...", *executionType)
 	keys, err := c.Keys(fmt.Sprintf("%s:*", *executionType)).Result()
 	if err != nil {
-		log.WithField("cause", err.Error()).Fatal("failed listing all orchestration keys")
+		log.WithError(err).Fatal("failed listing all keys")
 	}
 
+	log.Info("Filtering...")
 	var executions []execution
 	for _, key := range keys {
 		if strings.HasPrefix(key, fmt.Sprintf("%s:app:", *executionType)) ||
@@ -68,25 +87,33 @@ func main() {
 			continue
 		}
 
-		status, err := c.HGet(key, "status").Result()
-		if err != nil {
-			log.WithField("cause", err.Error()).Warn("execution does not have status")
-			continue
+		var shouldPass bool
+		for _, f := range filters {
+			isMatching, err := filter.Get(f)(c, key, f)
+			log.WithFields(logrus.Fields{"match": isMatching, "key": key}).Debugf("%#v", f)
+			if err != nil {
+				log.WithError(err).Warn("could not complete filter")
+				shouldPass = true
+				break
+			}
+			if !isMatching {
+				shouldPass = true
+				break
+			}
 		}
-
-		if status != *statusFilter {
+		if shouldPass {
 			continue
 		}
 
 		start, err := c.HGet(key, "startTime").Result()
 		if err != nil {
-			log.WithField("cause", err.Error()).Warn("failed getting startTime on key")
+			log.WithError(err).Warn("failed getting startTime on key")
 			continue
 		}
 
 		timestamp, err := strconv.ParseInt(start, 10, 64)
 		if err != nil {
-			log.WithField("cause", err.Error()).Error("could not convert starttime to int")
+			log.WithError(err).Error("could not convert starttime to int")
 			continue
 		}
 
