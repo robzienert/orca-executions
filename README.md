@@ -9,7 +9,21 @@ Get it from the releases page.
 ## Usage
 
 ```
-$ orca-executions [-type orchestration|pipeline] [-status ExecutionStatus] [-filters FILTERS]
+Usage of orca-executions
+  -debug
+    	Set if you want debug level logging
+  -fields string
+    	Extra fields to return in the data table for each record, comma-delimited
+  -filters string
+    	Extra filters in comma-delimited Key=Value format
+  -quiet
+    	Set if you do not want logging enabled
+  -redisAddr string
+    	The address for orca's redis instance (default "localhost:6379")
+  -status string
+    	the execution status to filter on (default "RUNNING")
+  -type string
+    	orchestration or pipeline (default "orchestration")
 ```
 
 * `redisAddr` the address to your redis host (defaults to `localhost:6379`)

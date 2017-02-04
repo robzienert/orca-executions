@@ -23,6 +23,7 @@ var (
 	executionType = flag.String("type", "orchestration", "orchestration or pipeline")
 	statusFilter  = flag.String("status", "RUNNING", "the execution status to filter on")
 	extraFilters  = flag.String("filters", "", "Extra filters in comma-delimited Key=Value format")
+	fields        = flag.String("fields", "", "Extra fields to return in the data table for each record, comma-delimited")
 	quiet         = flag.Bool("quiet", false, "Set if you do not want logging enabled")
 	debug         = flag.Bool("debug", false, "Set if you want debug level logging")
 )
@@ -30,10 +31,19 @@ var (
 type execution struct {
 	Key       string
 	StartTime time.Time
+	Fields    []string
 }
 
 func (e execution) TimeSince() string {
 	return time.Now().Sub(e.StartTime).String()
+}
+
+func (e execution) String() string {
+	s := []string{e.Key, e.TimeSince()}
+	for _, f := range e.Fields {
+		s = append(s, f)
+	}
+	return strings.Join(s, "  ")
 }
 
 type ByStartTime []execution
@@ -118,15 +128,36 @@ func main() {
 			continue
 		}
 
-		executions = append(executions, execution{
+		execution := execution{
 			Key:       key,
 			StartTime: time.Unix(timestamp/1000, 0),
-		})
+		}
+
+		if *fields != "" {
+			for _, f := range strings.Split(*fields, ",") {
+				fv, err := c.HGet(key, f).Result()
+				if err != nil {
+					fv = "ERR"
+					log.WithError(err).Warnf("could not get field %s", f)
+				}
+				execution.Fields = append(execution.Fields, fv)
+			}
+		}
+
+		executions = append(executions, execution)
 	}
 
 	sort.Sort(ByStartTime(executions))
+
+	legend := []string{"key", "runTime"}
+	if *fields != "" {
+		for _, f := range strings.Split(*fields, ",") {
+			legend = append(legend, f)
+		}
+	}
+	fmt.Println(strings.Join(legend, "  "))
 	for _, execution := range executions {
-		fmt.Printf("%s  %s\n", execution.Key, execution.TimeSince())
+		fmt.Println(execution.String())
 	}
 }
 
