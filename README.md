@@ -12,9 +12,12 @@ Get it from the releases page.
 $ orca-executions [-type orchestration|pipeline] [-status ExecutionStatus] [-filters FILTERS]
 ```
 
+* `redisAddr` the address to your redis host (defaults to `localhost:6379`)
 * `type` will default to `orchestration`
 * `status` will default to `RUNNING`
 * `filters` is a comma-delimited `Key=Value` list of filters.
+* `quiet` will disable logging
+* `debug` will enable debug-level logging
 
 `ExecutionStatus` is one of the enum values here: https://github.com/spinnaker/orca/blob/master/orca-core/src/main/groovy/com/netflix/spinnaker/orca/ExecutionStatus.groovy
 

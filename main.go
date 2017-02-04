@@ -19,6 +19,7 @@ import (
 var (
 	log = logrus.New()
 
+	redisAddr     = flag.String("redisAddr", "localhost:6379", "The address for orca's redis instance")
 	executionType = flag.String("type", "orchestration", "orchestration or pipeline")
 	statusFilter  = flag.String("status", "RUNNING", "the execution status to filter on")
 	extraFilters  = flag.String("filters", "", "Extra filters in comma-delimited Key=Value format")
@@ -131,7 +132,7 @@ func main() {
 
 func createClient() (*redis.Client, error) {
 	c := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     *redisAddr,
 		Password: "",
 		DB:       0,
 	})
