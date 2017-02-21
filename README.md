@@ -53,9 +53,3 @@ Will return all running pipelines that contains a stage type of `canary`.
 
 Will return all executions with a status of TERMINAL, that are not parallel and
 have been canceled.
-
-# ContainsStage
-
-`orca-executions -type pipeline -filters ContainsStage=canary`
-
-Will return all running pipelines that contains a stage type of `canary`.
