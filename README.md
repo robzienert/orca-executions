@@ -41,7 +41,13 @@ Filters are applied to each matching hash, inspecting individual hash keys and
 their values. By default, filters will perform an equality comparison, but there
 are other custom filters for doing more advanced inspection:
 
-# standard behavior
+#### ContainsStage
+
+`orca-executions -type pipeline -filters ContainsStage=canary`
+
+Will return all running pipelines that contains a stage type of `canary`.
+
+# examples
 
 `orca-executions -status TERMINAL -filters parallel=false,canceled=true`
 
