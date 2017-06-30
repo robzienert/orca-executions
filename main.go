@@ -90,6 +90,10 @@ func main() {
 		log.WithError(err).Fatal("failed listing all keys")
 	}
 
+	keys = filterSlice(keys, func(s string) bool {
+		return !strings.HasSuffix(s, ":stageIndex")
+	})
+
 	log.Info("Filtering...")
 	var executions []execution
 	for _, key := range keys {
@@ -172,4 +176,13 @@ func createClient() (*redis.Client, error) {
 		return nil, errors.Wrap(err, "could not connect to redis")
 	}
 	return c, nil
+}
+
+func filterSlice(ss []string, test func(string) bool) (ret []string) {
+	for _, s := range ss {
+		if test(s) {
+			ret = append(ret, s)
+		}
+	}
+	return
 }
